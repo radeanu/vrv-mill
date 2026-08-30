@@ -1,0 +1,30 @@
+{
+	"name": "vrv-mill",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "tsc && tsc-alias && node dist/src/index.js",
+		"build": "rm -rf dist && tsc && tsc-alias"
+	},
+	"dependencies": {
+		"compression": "^1.8.1",
+		"cors": "^2.8.5",
+		"dotenv": "^17.2.3",
+		"express": "^5.1.0",
+		"winston": "^3.19.0",
+		"yup": "^1.7.1"
+	},
+	"devDependencies": {
+		"@types/compression": "^1.8.1",
+		"@types/cors": "^2.8.19",
+		"@types/express": "^5.0.3",
+		"@types/node": "^25.0.7",
+		"eslint": "^9.39.1",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-prettier": "^5.5.4",
+		"prettier": "^3.6.2",
+		"tsc-alias": "^1.8.16",
+		"typescript": "^5.9.3"
+	}
+}
