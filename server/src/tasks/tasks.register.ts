@@ -1,3 +1,5 @@
+import { type Tasks, addTaskToQueue } from './tasks.queue';
+
 const _tasksRegister = new Set<string>();
 
 export function useTaskRegister() {
@@ -5,10 +7,11 @@ export function useTaskRegister() {
 		return _tasksRegister.has(key);
 	}
 
-	function addTask(key: string) {
-		if (taskExists(key)) return;
+	function addTask(task: Tasks) {
+		if (taskExists(task.key)) return;
 
-		_tasksRegister.add(key);
+		_tasksRegister.add(task.key);
+		addTaskToQueue(task);
 	}
 
 	function removeTask(key: string) {

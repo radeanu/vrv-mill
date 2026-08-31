@@ -11,7 +11,7 @@ export type SelectItemTask = {
 	name: 'selectItem';
 	payload: {
 		id: number;
-		pos: number;
+		idx: number;
 	};
 };
 
@@ -19,7 +19,6 @@ export type UpdateItemPosTask = {
 	key: string;
 	name: 'updateItemPos';
 	payload: {
-		id: number;
 		oldPos: number;
 		newPos: number;
 	};
@@ -27,7 +26,7 @@ export type UpdateItemPosTask = {
 
 export type Tasks = AddItemTask | SelectItemTask | UpdateItemPosTask;
 
-function createQueue<T extends Tasks>() {
+function _createQueue<T extends Tasks>() {
 	let _queue: T[] = [];
 
 	function addTask(task: T) {
@@ -43,5 +42,15 @@ function createQueue<T extends Tasks>() {
 	return { addTask, getAndFlushTasks };
 }
 
-export const baseTasksQ = createQueue<AddItemTask>();
-export const changeTasksQ = createQueue<SelectItemTask | UpdateItemPosTask>();
+export const addTasksQ = _createQueue<AddItemTask>();
+export const changeTasksQ = _createQueue<SelectItemTask | UpdateItemPosTask>();
+
+export function addTaskToQueue(task: Tasks) {
+	if (task.name === 'addItem') {
+		addTasksQ.addTask(task);
+	}
+
+	if (task.name === 'selectItem' || task.name === 'updateItemPos') {
+		changeTasksQ.addTask(task);
+	}
+}

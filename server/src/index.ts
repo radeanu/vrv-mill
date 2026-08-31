@@ -4,6 +4,8 @@ import { createServer } from 'http';
 import { env, useCors, useBodyParser, useCompression } from '@/config';
 import useRoutes from '@/routes/routes';
 
+import '@/tasks/tasks.timer';
+
 const app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');

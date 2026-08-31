@@ -15,10 +15,9 @@ export default {
 	getList: yup
 		.object({
 			id: VALIDATORS.number('id').optional(),
-			limit: VALIDATORS.number('limit').default(20),
-			offset: VALIDATORS.number('offset').default(0),
+			page: VALIDATORS.number('page').default(0),
 		})
-		.default({ limit: 20, offset: 0 }),
+		.default({ page: 0 }),
 	addItemToList: VALIDATORS.number('id', true),
 	updateItemOrder: yup.object({
 		fromPos: VALIDATORS.number('fromPos', true),
