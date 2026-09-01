@@ -1,49 +1,54 @@
 <template>
-  <section>
-    <ul>
-      <li v-for="item in list" :key="item" ref="items">
-        <slot :item>#{{ item }}</slot>
-      </li>
-    </ul>
-  </section>
+  <ul>
+    <li v-for="item in list" :key="item" class="item">
+      <slot :item>#{{ item }}</slot>
+    </li>
+
+    <li class="observer" ref="observerEl" />
+
+    <div v-if="loading" class="loader-wrapper">
+      <div class="loader" />
+    </div>
+  </ul>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useTemplateRef, watchEffect } from 'vue'
+import { useTemplateRef, watch } from 'vue'
 
 import { useIntersectionObserver } from '@/composables/useIntersectionObserver'
 
-const props = defineProps<{ list: number[]; offset: number; limit: number }>()
+const props = defineProps<{
+  list: number[]
+  page: number
+  loading?: boolean
+  trackNextPage?: boolean
+}>()
 
-const itemsRef = useTemplateRef('items')
+const $emit = defineEmits<{
+  (e: 'nextPage'): void
+}>()
+
+const observerEl = useTemplateRef('observerEl')
 const observer = useIntersectionObserver()
 
-const watchIdx = computed(() => props.offset + props.limit - 5)
+watch([observerEl, () => props.trackNextPage], () => {
+  if (!observerEl.value || !props.trackNextPage) {
+    observer.removeObserver()
+    return
+  }
 
-watchEffect(() => {
-  const last = itemsRef.value?.at(watchIdx.value)
-
-  if (!last) return
-
-  watchForDisplay(last)
+  observer.createObserver(
+    observerEl.value,
+    {
+      isIntersecting: {
+        handler() {
+          $emit('nextPage')
+        },
+      },
+    },
+    { threshold: 0.1 },
+  )
 })
-
-function watchForDisplay(item: HTMLLIElement) {
-  observer.removeObserver()
-
-  observer.createObserver(item, {
-    isIntersecting: {
-      handler(el) {
-        console.log('VISIBLE', el)
-      },
-    },
-    isHidden: {
-      handler() {
-        console.log('HIDDEN')
-      },
-    },
-  })
-}
 </script>
 
 <style scoped>
@@ -52,15 +57,57 @@ ul {
   padding: 0;
   list-style: none;
   overflow: auto;
-  height: 100%;
 }
 
-li {
-  padding: 30px;
+.item {
+  padding: 14px;
   border-bottom: 1px solid #cacaca;
 
-  &:last-of-type {
-    border-bottom: 0;
+  &:has(+ .observer) {
+    border-bottom: none;
+  }
+}
+
+.observer {
+  height: 20px;
+}
+
+.loader-wrapper {
+  position: sticky;
+  bottom: 0;
+  z-index: 9;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+}
+
+.loader {
+  width: 20px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 4px solid #0000;
+  border-right-color: #8b8b8b;
+  position: relative;
+  animation: l24 1s infinite linear;
+}
+.loader:before,
+.loader:after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: inherit;
+  animation: inherit;
+  animation-duration: 2s;
+}
+.loader:after {
+  animation-duration: 4s;
+}
+@keyframes l24 {
+  100% {
+    transform: rotate(1turn);
   }
 }
 </style>

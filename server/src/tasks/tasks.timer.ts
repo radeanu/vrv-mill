@@ -7,9 +7,9 @@ const tasksResponse = useTasksResponse();
 
 setInterval(() => {
 	const tasks = changeTasksQ.getAndFlushTasks();
-	console.log({ name: 'changeTasksQ', length: tasks.length });
-
 	if (!tasks.length) return;
+
+	console.log({ name: 'changeTasksQ', length: tasks.length });
 
 	if (tasks.some((t) => t.name === 'selectItem')) {
 		clearCachedPages();
@@ -20,9 +20,9 @@ setInterval(() => {
 
 setInterval(() => {
 	const tasks = addTasksQ.getAndFlushTasks();
-	console.log({ name: 'addTasksQ', length: tasks.length });
-
 	if (!tasks.length) return;
+
+	console.log({ name: 'addTasksQ', length: tasks.length });
 
 	runTasks(tasks);
 }, 10_000);

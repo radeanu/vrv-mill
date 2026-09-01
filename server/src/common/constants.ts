@@ -5,3 +5,4 @@ export const DATE_RU_FORMAT = new Intl.DateTimeFormat('ru-RU', {
 	month: '2-digit',
 	year: 'numeric',
 });
+export const IDEMPOTENCY_KEY = 'idempotency_key';

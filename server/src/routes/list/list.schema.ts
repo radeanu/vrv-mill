@@ -1,13 +1,11 @@
 import * as yup from 'yup';
 
 const VALIDATORS = {
-	number: (key: string, required?: boolean) => {
-		const rule = yup
+	number: (key: string) => {
+		return yup
 			.number()
 			.integer(key + ' must be int')
 			.typeError(key + ' typeError');
-
-		return required ? rule.required(key + ' required') : rule;
 	},
 };
 
@@ -15,12 +13,17 @@ export default {
 	getList: yup
 		.object({
 			id: VALIDATORS.number('id').optional(),
-			page: VALIDATORS.number('page').default(0),
+			page: VALIDATORS.number('page').default(1),
 		})
 		.default({ page: 0 }),
-	addItemToList: VALIDATORS.number('id', true),
+	addItemToList: yup
+		.object({
+			key: yup.string().required('idempotency_key required'),
+			id: VALIDATORS.number('id').required(),
+		})
+		.required('id required'),
 	updateItemOrder: yup.object({
-		fromPos: VALIDATORS.number('fromPos', true),
-		toPos: VALIDATORS.number('fromPos', true),
+		fromPos: VALIDATORS.number('fromPos').required(),
+		toPos: VALIDATORS.number('fromPos').required(),
 	}),
 };

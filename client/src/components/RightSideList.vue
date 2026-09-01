@@ -1,5 +1,5 @@
 <template>
-  <ScrollList :list :offset :limit />
+  <ScrollList :list :page :limit />
 </template>
 
 <script setup lang="ts">
@@ -8,7 +8,7 @@ import ScrollList from '@/components/ScrollList.vue'
 import { useList } from '@/composables/useList'
 import { onMounted } from 'vue'
 
-const { list, offset, limit, fetchItems, nextPage } = useList()
+const { list, page, limit, fetchItems, nextPage } = useList()
 
 onMounted(async () => {
   await fetchItems()
