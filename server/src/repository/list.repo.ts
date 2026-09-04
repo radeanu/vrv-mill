@@ -1,121 +1,129 @@
 import { logger } from '@/config';
 import { isNum, LIST_LENGTH, PAGE_LIMIT } from '@/common';
 
-export type SelectedItem = { idx: number; id: number };
+let list: Int32Array<ArrayBuffer>;
+const selectedIndexes = new Set<number>();
+const selectedOrder: number[] = [];
+
+const maxLength = LIST_LENGTH + 100000;
+let currentLength = LIST_LENGTH;
+
 export type PaginatedResult = {
-	items: number[];
 	hasMore: boolean;
+	totalPages: number;
+	nextCursor: number | null;
+	items: Array<{ idx: number; id: number }>;
 };
-export type SelectedPaginatedResult = {
-	items: SelectedItem[];
-	hasMore: boolean;
-};
-
-let list = Array.from({ length: LIST_LENGTH }, (_, i) => i + 1);
-
-const selectedList: SelectedItem[] = [];
-const selectedRowIdx = new Set<number>();
 
 export function resetList() {
-	list = Array.from({ length: LIST_LENGTH }, (_, i) => i + 1);
+	list = new Int32Array(maxLength);
+	selectedOrder.length = 0;
+	selectedIndexes.clear();
+	currentLength = LIST_LENGTH;
+
+	for (let i = 0; i < LIST_LENGTH; i++) {
+		list[i] = i + 1;
+	}
 }
 
-export function getPaginatedList(page: number, searchId?: number): PaginatedResult {
-	const chunk: number[] = [];
-	let skippedCount = 0;
+export function getPaginatedList(cursor: number | null, searchId?: number): PaginatedResult {
+	const result: Array<{ idx: number; id: number }> = [];
 
-	const offset = (page - 1) * PAGE_LIMIT;
+	const startIndex = cursor !== null ? cursor - 1 : currentLength - 1;
 
-	for (let i = 0; i < list.length; i++) {
-		if (selectedRowIdx.has(i)) continue;
+	for (let i = startIndex; i >= 0; i--) {
+		if (selectedIndexes.has(i)) continue;
 
 		const id = list[i];
 
 		if (searchId && searchId !== id) continue;
+		result.push({ id, idx: i });
 
-		if (skippedCount < offset) {
-			skippedCount++;
-			continue;
-		}
-
-		chunk.push(id);
-
-		if (chunk.length === PAGE_LIMIT + 1) break;
+		if (result.length === PAGE_LIMIT) break;
 	}
 
-	const hasMore = chunk.length > PAGE_LIMIT;
-	if (hasMore) chunk.pop();
+	const nextCursor = result.length > 0 ? result[result.length - 1].idx : null;
+
+	const totalLeftItems = currentLength - selectedIndexes.size;
+	const totalPages = Math.ceil(totalLeftItems / PAGE_LIMIT);
 
 	return {
-		items: chunk,
-		hasMore,
+		totalPages,
+		items: result,
+		nextCursor: nextCursor,
+		hasMore: nextCursor !== null && nextCursor > 0,
 	};
 }
 
-export function getSelectedList(page: number, searchId?: number): SelectedPaginatedResult {
-	const offset = (page - 1) * PAGE_LIMIT;
-	const sliceLimit = offset + PAGE_LIMIT + 1;
+export function getSelectedList(cursor: number | null, searchId?: number): PaginatedResult {
+	const targetList = isNum(searchId)
+		? selectedOrder.filter((idx) => list[idx] === searchId)
+		: selectedOrder;
 
-	if (isNum(searchId)) {
-		const filtered = selectedList.filter((v) => v.id === searchId);
-		const chunk = filtered.slice(offset, sliceLimit);
+	const startIndex = cursor !== null ? cursor + 1 : 0;
+	const result = targetList.slice(startIndex, startIndex + PAGE_LIMIT + 1);
+	const hasMore = result.length > PAGE_LIMIT;
 
-		const hasMore = chunk.length > PAGE_LIMIT;
-		if (hasMore) chunk.pop();
+	if (hasMore) result.pop();
 
-		return {
-			items: chunk,
-			hasMore,
-		};
-	}
+	const totalPages = Math.ceil(targetList.length / PAGE_LIMIT);
+	const nextCursor = result.length > 0 ? startIndex + result.length - 1 : null;
 
-	const chunk = selectedList.slice(offset, sliceLimit);
-
-	const hasMore = chunk.length > PAGE_LIMIT;
-	if (hasMore) chunk.pop();
+	const formattedItems = result.map((idx) => ({
+		idx,
+		id: list[idx],
+	}));
 
 	return {
-		items: chunk,
 		hasMore,
+		totalPages,
+		items: formattedItems,
+		nextCursor,
 	};
 }
 
 export function addItemToList(id: number) {
 	try {
-		list.push(id);
-		return true;
+		if (currentLength >= maxLength) {
+			logger.error('max length exceeded');
+			return { success: false };
+		}
+
+		list[currentLength] = id;
+		currentLength++;
+
+		return { success: true, idx: currentLength };
 	} catch (error) {
 		logger.error(error);
-		return false;
+		return { success: false };
 	}
 }
 
-export function selectItem(id: number, idx: number) {
-	if (list[idx] !== id) return false;
-
-	selectedRowIdx.add(idx);
-	selectedList.push({ id, idx });
+export function selectItem(idx: number) {
+	if (selectedIndexes.has(idx)) return true;
+	selectedIndexes.add(idx);
+	selectedOrder.push(idx);
 
 	return true;
 }
 
 export function flushSelectedItems() {
-	selectedRowIdx.clear();
-	selectedList.length = 0;
+	selectedIndexes.clear();
+	selectedOrder.length = 0;
 }
 
 export function updateSelectedItemPos(oldPos: number, newPos: number) {
 	try {
 		if (oldPos === newPos) return true;
 
-		if (selectedList[oldPos] === undefined || selectedList[newPos] === undefined) {
+		if (selectedOrder[oldPos] === undefined || selectedOrder[newPos] === undefined) {
 			return false;
 		}
 
-		const [movedItem] = selectedList.splice(oldPos, 1);
+		const [movedItem] = selectedOrder.splice(oldPos, 1);
 
 		if (movedItem) {
-			selectedList.splice(newPos, 0, movedItem);
+			selectedOrder.splice(newPos, 0, movedItem);
 		}
 
 		return true;

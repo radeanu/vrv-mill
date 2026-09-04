@@ -9,8 +9,8 @@ type CachedPage = {
 const PAGE_TTL = 15_000;
 const cachedPages = new Map<number, CachedPage>();
 
-export function getOrCreatePage(page: number): PaginatedResult {
-	const cachedP = cachedPages.get(page);
+export function getOrCreatePage(cursor: number): PaginatedResult {
+	const cachedP = cachedPages.get(cursor);
 
 	if (cachedP) {
 		cachedP.expiresAt = Date.now() + PAGE_TTL;
@@ -18,8 +18,8 @@ export function getOrCreatePage(page: number): PaginatedResult {
 		return cachedP.items;
 	}
 
-	const listItems = listRepo.getPaginatedList(page);
-	cachedPages.set(page, {
+	const listItems = listRepo.getPaginatedList(cursor);
+	cachedPages.set(cursor, {
 		items: listItems,
 		expiresAt: Date.now() + PAGE_TTL,
 	});
@@ -32,7 +32,7 @@ export function cleanUpCachedPages() {
 		const expired = Date.now() > page.expiresAt;
 
 		if (expired) {
-			console.log(`Cached page removed: ${key}`);
+			console.log(`Cached page removed for cursor: ${key}`);
 			cachedPages.delete(key);
 		}
 	});

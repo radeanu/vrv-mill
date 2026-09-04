@@ -1,6 +1,7 @@
 import * as yup from 'yup';
 
 const VALIDATORS = {
+	idpKey: yup.string().required('idempotency_key required'),
 	number: (key: string) => {
 		return yup
 			.number()
@@ -10,16 +11,20 @@ const VALIDATORS = {
 };
 
 export default {
-	getList: yup
-		.object({
-			id: VALIDATORS.number('id').optional(),
-			page: VALIDATORS.number('page').default(1),
-		})
-		.default({ page: 0 }),
+	getList: yup.object({
+		id: VALIDATORS.number('id').optional(),
+		cursor: VALIDATORS.number('cursor').default(null),
+	}),
 	addItemToList: yup
 		.object({
-			key: yup.string().required('idempotency_key required'),
+			key: VALIDATORS.idpKey,
 			id: VALIDATORS.number('id').required(),
+		})
+		.required('id required'),
+	selectItem: yup
+		.object({
+			key: VALIDATORS.idpKey,
+			idx: VALIDATORS.number('idx').required(),
 		})
 		.required('id required'),
 	updateItemOrder: yup.object({

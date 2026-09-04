@@ -1,10 +1,8 @@
 <template>
   <ul>
-    <li v-for="item in list" :key="item" class="item">
-      <slot :item>#{{ item }}</slot>
-    </li>
+    <slot name="list" />
 
-    <li class="observer" ref="observerEl" />
+    <div class="observer" ref="observerEl" />
 
     <div v-if="loading" class="loader-wrapper">
       <div class="loader" />
@@ -12,14 +10,12 @@
   </ul>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts" generic="T">
 import { useTemplateRef, watch } from 'vue'
 
 import { useIntersectionObserver } from '@/composables/useIntersectionObserver'
 
 const props = defineProps<{
-  list: number[]
-  page: number
   loading?: boolean
   trackNextPage?: boolean
 }>()
@@ -57,15 +53,6 @@ ul {
   padding: 0;
   list-style: none;
   overflow: auto;
-}
-
-.item {
-  padding: 14px;
-  border-bottom: 1px solid #cacaca;
-
-  &:has(+ .observer) {
-    border-bottom: none;
-  }
 }
 
 .observer {

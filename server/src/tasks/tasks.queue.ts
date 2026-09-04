@@ -10,7 +10,6 @@ export type SelectItemTask = {
 	key: string;
 	name: 'selectItem';
 	payload: {
-		id: number;
 		idx: number;
 	};
 };

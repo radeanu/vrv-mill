@@ -1,9 +1,9 @@
 import { runTasks } from '@/tasks/tasks.runner';
-import { useTasksResponse } from '@/tasks/tasks.response';
+import { useTasksStatus } from '@/tasks/tasks.status';
 import { changeTasksQ, addTasksQ } from '@/tasks/tasks.queue';
 import { cleanUpCachedPages, clearCachedPages } from '@/cache/list.cache';
 
-const tasksResponse = useTasksResponse();
+const tasksStatus = useTasksStatus();
 
 setInterval(() => {
 	const tasks = changeTasksQ.getAndFlushTasks();
@@ -28,6 +28,6 @@ setInterval(() => {
 }, 10_000);
 
 setInterval(() => {
-	tasksResponse.cleanUpOldResponses();
+	tasksStatus.cleanUpOldStatuses();
 	cleanUpCachedPages();
 }, 1000);

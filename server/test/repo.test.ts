@@ -1,11 +1,10 @@
-import { describe, it, beforeEach, afterEach } from 'node:test';
+import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { listRepo } from '@/repository';
-import { LIST_LENGTH, PAGE_LIMIT } from '@/common';
 
 describe('list', () => {
-	afterEach(() => {
+	beforeEach(() => {
 		listRepo.resetList();
 		listRepo.flushSelectedItems();
 	});
@@ -13,43 +12,42 @@ describe('list', () => {
 	it('add new item to list', () => {
 		listRepo.addItemToList(29);
 
-		const lastPageNr = Math.ceil((LIST_LENGTH + 1) / PAGE_LIMIT);
-		const lastPage = listRepo.getPaginatedList(lastPageNr);
+		const firstPage = listRepo.getPaginatedList(null);
 
-		assert.equal(29, lastPage.items.at(-1));
+		assert.equal(29, firstPage.items.at(0)?.id);
 	});
 
-	it('select item 9 at idx 8', () => {
-		const res = listRepo.selectItem(9, 8);
-		const targetPage = listRepo.getPaginatedList(1);
-		const selectedList = listRepo.getSelectedList(1).items.map((v) => v.id);
+	it('select id 999996 at index 999995', () => {
+		listRepo.selectItem(999995);
+		const targetPage = listRepo.getPaginatedList(null).items.map((v) => v.id);
+		const selectedList = listRepo.getSelectedList(null).items.map((v) => v.idx);
 
-		console.log({ res, selectedList });
 		assert.deepEqual(
-			targetPage.items,
-			[1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+			targetPage,
+			[
+				1000000, 999999, 999998, 999997, 999995, 999994, 999993, 999992, 999991, 999990, 999989,
+				999988, 999987, 999986, 999985, 999984, 999983, 999982, 999981, 999980,
+			],
 		);
-		assert.deepEqual(selectedList, [9]);
+		assert.deepEqual(selectedList, [999995]);
 	});
 });
 
 describe('update selected item pos', () => {
 	beforeEach(() => {
-		[1, 2, 3, 4, 5].forEach((v, idx) => {
-			listRepo.selectItem(v, idx);
+		listRepo.flushSelectedItems();
+		[1, 2, 3, 4, 5].forEach((_, idx) => {
+			listRepo.selectItem(idx);
 		});
 	});
 
-	afterEach(() => {
-		listRepo.flushSelectedItems();
-	});
-
-	it('apply new pos for id=2 at idx=1 to idx=4', () => {
+	it('apply new pos for id=1 at idx=1 to idx=4', () => {
 		const result = listRepo.updateSelectedItemPos(1, 4);
 		assert.equal(result, true);
 
-		const listAfter = listRepo.getSelectedList(1).items.map((v) => v.id);
-		assert.deepEqual(listAfter, [1, 3, 4, 5, 2]);
+		const listAfter = listRepo.getSelectedList(null).items.map((v) => v.idx);
+
+		assert.deepEqual(listAfter, [0, 2, 3, 4, 1]);
 	});
 
 	it('return false for invalid positions', () => {

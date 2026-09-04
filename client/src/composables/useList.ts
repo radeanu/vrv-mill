@@ -1,21 +1,30 @@
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { useLoading } from '@/composables/useLoading'
-import { fetchList, postAddNewId } from '@/services/api.service'
+import { useEventBus } from '@/composables/useEventBus'
+import { fetchList, postAddNewId, postSelectItem, type TaskResStatus } from '@/services/api.service'
+import { useTasksQueue } from './useTasksQueue'
+
+const tasksQueue = useTasksQueue()
 
 export function useList() {
-  const page = ref(1)
   const hasMore = ref(false)
-  const list = ref<number[]>([])
   const newId = ref<number>()
   const searchId = ref<number>()
+  const cursor = ref<number | null>(null)
 
-  const listLoader = useLoading()
+  const list = ref<Array<{ idx: number; id: number }>>([])
+  const pendingList = ref<Array<{ id: number; key: string }>>([])
+
+  const eventBus = useEventBus()
   const addLoader = useLoading()
+  const listLoader = useLoading()
 
   const searchParams = computed(() => {
-    const params: { page: string; id?: string } = {
-      page: page.value.toString(),
+    const params: { cursor?: string; id?: string } = {}
+
+    if (cursor.value !== null) {
+      params.id = cursor.value.toString()
     }
 
     if (searchId.value !== undefined) {
@@ -30,13 +39,36 @@ export function useList() {
   })
 
   watch(searchId, async () => {
-    page.value = 1
+    cursor.value = null
     list.value.length = 0
     await fetchItems()
   })
 
+  onMounted(async () => {
+    await fetchItems()
+    eventBus.on('task:status', handleAddTaskStatus)
+  })
+
+  onBeforeUnmount(() => {
+    eventBus.off('task:status', handleAddTaskStatus)
+  })
+
+  function handleAddTaskStatus(res: TaskResStatus<{ idx?: number }>) {
+    if (!res.task) return
+
+    const targetTask = tasksQueue.get(res.key)
+    if (targetTask?.name !== 'addItem') return
+
+    const payload = res.task.payload
+
+    if (res.task.status === 'success' && payload?.idx !== undefined) {
+      list.value.unshift({ id: targetTask.payload.id, idx: payload.idx })
+    }
+
+    pendingList.value = pendingList.value.filter((v) => v.key !== targetTask.key)
+  }
+
   async function nextPage() {
-    page.value += 1
     await fetchItems()
   }
 
@@ -46,6 +78,7 @@ export function useList() {
 
       const res = await fetchList(searchParams.value)
       hasMore.value = res.hasMore
+      cursor.value = res.nextCursor
 
       list.value.push(...res.items)
     } catch (error) {
@@ -60,9 +93,10 @@ export function useList() {
       if (newId.value === undefined) return
       addLoader.start()
 
-      const sent = await postAddNewId(newId.value)
+      const res = await postAddNewId(newId.value)
 
-      if (sent) {
+      if (res.sent) {
+        pendingList.value.unshift({ id: newId.value, key: res.key })
         newId.value = undefined
       }
     } catch (error) {
@@ -72,9 +106,22 @@ export function useList() {
     }
   }
 
+  async function selectItem(idx: number) {
+    try {
+      if (newId.value === undefined) return
+
+      const sent = await postSelectItem(idx)
+
+      if (sent) {
+        list.value = list.value.filter((v) => v.idx !== idx)
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
   return {
     list,
-    page,
     newId,
     hasMore,
     nextPage,
@@ -83,6 +130,8 @@ export function useList() {
     addLoader,
     listLoader,
     fetchItems,
+    selectItem,
+    pendingList,
     disableAddBtn,
   }
 }

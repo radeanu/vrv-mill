@@ -16,38 +16,58 @@
     </div>
 
     <ScrollList
-      :list
-      :page
+      v-if="list.length"
       :track-next-page="hasMore"
       :loading="listLoader.isLoading.value"
       class="list"
       @next-page="nextPage"
-    />
+    >
+      <template #list>
+        <li
+          v-for="(item, idx) in pendingList"
+          :key="item.key"
+          class="list-item"
+          @dblclick="selectItem(item, idx)"
+        >
+          #{{ item.id }}
+        </li>
+
+        <li
+          v-for="(item, idx) in list"
+          :key="`${item.id}-${item.idx}`"
+          class="list-item"
+          @dblclick="selectItem(item, idx)"
+        >
+          #{{ item.id }}
+        </li>
+      </template>
+    </ScrollList>
+    <p v-else>Ничего не найдено</p>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { useList } from '@/composables/useList'
 
 import ScrollList from '@/components/ScrollList.vue'
 import InputNumber from '@/components/InputNumber.vue'
-import { useList } from '@/composables/useList'
+
+//TODO handle new element select when server not saved yet
 
 const {
   list,
   page,
-  fetchItems,
-  nextPage,
-  hasMore,
-  listLoader,
-  addLoader,
-  addNewId,
-  searchId,
   newId,
+  hasMore,
+  nextPage,
+  searchId,
+  addNewId,
+  addLoader,
+  listLoader,
+  selectItem,
+  pendingList,
   disableAddBtn,
 } = useList()
-
-onMounted(fetchItems)
 </script>
 
 <style scoped>
@@ -63,6 +83,15 @@ onMounted(fetchItems)
 
 .list {
   height: 85dvh;
+}
+
+.list-item {
+  padding: 14px;
+  border-bottom: 1px solid #cacaca;
+
+  &:last-of-type {
+    border-bottom: none;
+  }
 }
 
 .btn-add {
