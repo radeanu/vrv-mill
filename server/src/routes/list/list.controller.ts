@@ -16,7 +16,7 @@ export async function getList(req: Request, res: Response, next: NextFunction) {
 			stripUnknown: true,
 		});
 
-		if (queryValues.id !== undefined) {
+		if (queryValues.id !== undefined || queryValues.cursor === null) {
 			const pageData = listRepo.getPaginatedList(queryValues.cursor, queryValues.id);
 			return res.status(200).json(pageData);
 		}

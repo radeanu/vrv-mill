@@ -5,35 +5,38 @@
     </div>
 
     <ScrollList
-      v-if="list.length"
-      :list
-      :page
+      v-if="list.length || pendingList.length"
       :track-next-page="hasMore"
       :loading="listLoader.isLoading.value"
       class="list"
       @next-page="nextPage"
     >
       <template #list>
+        <li
+          v-for="item in pendingList"
+          :key="`${item.id}-${item.idx}`"
+          class="list-item list-item--new"
+        >
+          <span>#{{ item.id }}</span>
+          <span>сохранение...</span>
+        </li>
+
         <li v-for="item in list" :key="`${item.id}-${item.idx}`" draggable="true" class="list-item">
-          #{{ item.id }}
+          <span>#{{ item.id }}</span>
         </li>
       </template>
     </ScrollList>
 
-    <p v-else>Пока пусто, перетащите слева</p>
+    <p v-else>Пока пусто, добавьте слева</p>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-
 import ScrollList from '@/components/ScrollList.vue'
 import InputNumber from '@/components/InputNumber.vue'
 import { useSelectedList } from '@/composables/useSelectedList'
 
-const { list, page, fetchItems, nextPage, hasMore, listLoader, searchId } = useSelectedList()
-
-onMounted(fetchItems)
+const { list, pendingList, nextPage, hasMore, listLoader, searchId } = useSelectedList()
 </script>
 
 <style scoped>
@@ -52,11 +55,23 @@ onMounted(fetchItems)
 }
 
 .list-item {
-  padding: 14px;
   border-bottom: 1px solid #cacaca;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+
+  & span {
+    padding: 14px;
+  }
 
   &:last-of-type {
     border-bottom: none;
   }
+}
+
+.list-item--new {
+  cursor: not-allowed;
+  background-color: rgba(0, 121, 46, 0.178);
 }
 </style>

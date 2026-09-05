@@ -24,7 +24,7 @@ export function useList() {
     const params: { cursor?: string; id?: string } = {}
 
     if (cursor.value !== null) {
-      params.id = cursor.value.toString()
+      params.cursor = cursor.value.toString()
     }
 
     if (searchId.value !== undefined) {
@@ -46,11 +46,13 @@ export function useList() {
 
   onMounted(async () => {
     await fetchItems()
-    eventBus.on('task:status', handleAddTaskStatus)
+    eventBus.on('task:status/addItem', handleAddTaskStatus)
+    eventBus.on('task:status/selectItem', handleSelectItemTaskStatus)
   })
 
   onBeforeUnmount(() => {
-    eventBus.off('task:status', handleAddTaskStatus)
+    eventBus.off('task:status/addItem', handleAddTaskStatus)
+    eventBus.off('task:status/selectItem', handleSelectItemTaskStatus)
   })
 
   function handleAddTaskStatus(res: TaskResStatus<{ idx?: number }>) {
@@ -66,6 +68,35 @@ export function useList() {
     }
 
     pendingList.value = pendingList.value.filter((v) => v.key !== targetTask.key)
+  }
+
+  function handleSelectItemTaskStatus(res: TaskResStatus<{}>) {
+    if (!res.task) return
+
+    const targetTask = tasksQueue.get(res.key)
+    if (targetTask?.name !== 'selectItem') return
+
+    tasksQueue.remove(res.key)
+
+    const item = targetTask.payload
+
+    if (res.task.status === 'success') {
+      eventBus.emit('commitSelectItem', item)
+      return
+    }
+
+    const insPos = list.value.findIndex((v) => v.idx < item.idx)
+
+    console.log({ insPos })
+
+    if (insPos === -1) {
+      list.value.push(item)
+    } else {
+      list.value.splice(insPos, 0, item)
+    }
+
+    list.value.splice(item.idx, 0, item)
+    eventBus.emit('rollBackSelectItem', item)
   }
 
   async function nextPage() {
@@ -106,13 +137,12 @@ export function useList() {
     }
   }
 
-  async function selectItem(idx: number) {
+  async function selectItem(id: number, idx: number) {
     try {
-      if (newId.value === undefined) return
-
-      const sent = await postSelectItem(idx)
+      const sent = await postSelectItem(id, idx)
 
       if (sent) {
+        eventBus.emit('selectItem', { id, idx })
         list.value = list.value.filter((v) => v.idx !== idx)
       }
     } catch (error) {

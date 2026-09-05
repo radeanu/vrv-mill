@@ -19,6 +19,7 @@ export type SelectItemTask = {
   key: string
   name: 'selectItem'
   payload: {
+    id: number
     idx: number
   }
 }
@@ -110,9 +111,9 @@ export async function postAddNewId(id: number) {
   return res
 }
 
-export async function postSelectItem(idx: number) {
-  const url = new URL('http://localhost:3000/api/v1/list/select')
-  const body = JSON.stringify({ idx })
+export async function postSelectItem(id: number, idx: number) {
+  const url = new URL('http://localhost:3000/api/v1/list/select-item')
+  const body = JSON.stringify({ id, idx })
 
   const res = await _postNewTask(url, body)
 
@@ -120,7 +121,7 @@ export async function postSelectItem(idx: number) {
     tasksQueue.add(res.key, {
       key: res.key,
       name: 'selectItem',
-      payload: { idx },
+      payload: { id, idx },
     })
   }
 

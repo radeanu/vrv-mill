@@ -36,7 +36,8 @@ export function getPaginatedList(cursor: number | null, searchId?: number): Pagi
 
 		const id = list[i];
 
-		if (searchId && searchId !== id) continue;
+		if (searchId && !id.toString().includes(searchId.toString())) continue;
+
 		result.push({ id, idx: i });
 
 		if (result.length === PAGE_LIMIT) break;
@@ -57,7 +58,7 @@ export function getPaginatedList(cursor: number | null, searchId?: number): Pagi
 
 export function getSelectedList(cursor: number | null, searchId?: number): PaginatedResult {
 	const targetList = isNum(searchId)
-		? selectedOrder.filter((idx) => list[idx] === searchId)
+		? selectedOrder.filter((idx) => list[idx].toString().includes(searchId.toString()))
 		: selectedOrder;
 
 	const startIndex = cursor !== null ? cursor + 1 : 0;
@@ -89,6 +90,9 @@ export function addItemToList(id: number) {
 			return { success: false };
 		}
 
+		const exists = list.subarray(0, currentLength).includes(id);
+		if (exists) return { success: false };
+
 		list[currentLength] = id;
 		currentLength++;
 
@@ -100,6 +104,8 @@ export function addItemToList(id: number) {
 }
 
 export function selectItem(idx: number) {
+	if (idx === 999997) return false;
+
 	if (selectedIndexes.has(idx)) return true;
 	selectedIndexes.add(idx);
 	selectedOrder.push(idx);

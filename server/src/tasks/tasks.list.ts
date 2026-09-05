@@ -19,6 +19,10 @@ export function useAddItemTask() {
 		return _getTaskStatus('addItem', success, payload);
 	}
 
+	function getUniqueKey(task: AddItemTask) {
+		return task.payload.id.toString();
+	}
+
 	function executeTask(task: AddItemTask) {
 		try {
 			const res = listRepo.addItemToList(task.payload.id);
@@ -34,12 +38,17 @@ export function useAddItemTask() {
 	return {
 		getStatus,
 		executeTask,
+		getUniqueKey,
 	};
 }
 
 export function useSelectItemTask() {
 	function getStatus(success: boolean) {
 		return _getTaskStatus('selectItem', success);
+	}
+
+	function getUniqueKey(task: SelectItemTask) {
+		return `select:${task.payload.idx}`;
 	}
 
 	function executeTask(task: SelectItemTask) {
@@ -57,12 +66,17 @@ export function useSelectItemTask() {
 	return {
 		getStatus,
 		executeTask,
+		getUniqueKey,
 	};
 }
 
 export function useUpdateItemPosTask() {
 	function getStatus(success: boolean) {
 		return _getTaskStatus('updateItemPos', success);
+	}
+
+	function getUniqueKey(task: UpdateItemPosTask) {
+		return `update:${task.payload.oldPos}_${task.payload.newPos}`;
 	}
 
 	function executeTask(task: UpdateItemPosTask) {
@@ -80,5 +94,6 @@ export function useUpdateItemPosTask() {
 	return {
 		getStatus,
 		executeTask,
+		getUniqueKey,
 	};
 }

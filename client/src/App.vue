@@ -10,10 +10,12 @@
 <script setup lang="ts">
 import LeftSideList from '@/components/LeftSideList.vue'
 import RightSideList from '@/components/RightSideList.vue'
-import { useTasksQueue } from './composables/useTasksQueue.ts'
+import { useTasksQueue } from '@/composables/useTasksQueue.ts'
+import { useSysMetrics } from '@/composables/useSysMetrics'
 
 const tasksQueue = useTasksQueue()
 tasksQueue.watchForStatuses()
+useSysMetrics()
 </script>
 
 <style scoped>

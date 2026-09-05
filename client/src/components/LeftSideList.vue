@@ -4,7 +4,7 @@
       <InputNumber v-model="searchId" name="searchLeft" placeholder="Поиск по ID" />
       <InputNumber v-model="newId" name="newId" placeholder="Новый ID" />
       <button
-        class="btn-add"
+        class="btn"
         type="button"
         title="Добавить"
         :disabled="disableAddBtn"
@@ -16,29 +16,21 @@
     </div>
 
     <ScrollList
-      v-if="list.length"
+      v-if="list.length || pendingList.length"
       :track-next-page="hasMore"
       :loading="listLoader.isLoading.value"
       class="list"
       @next-page="nextPage"
     >
       <template #list>
-        <li
-          v-for="(item, idx) in pendingList"
-          :key="item.key"
-          class="list-item"
-          @dblclick="selectItem(item, idx)"
-        >
-          #{{ item.id }}
+        <li v-for="(item, idx) in pendingList" :key="item.key" class="list-item list-item--new">
+          <span>#{{ item.id }}</span>
+          <span>сохранение...</span>
         </li>
 
-        <li
-          v-for="(item, idx) in list"
-          :key="`${item.id}-${item.idx}`"
-          class="list-item"
-          @dblclick="selectItem(item, idx)"
-        >
-          #{{ item.id }}
+        <li v-for="(item, idx) in list" :key="`${item.id}-${item.idx}-${idx}`" class="list-item">
+          <span>#{{ item.id }}</span>
+          <button class="btn btn-select" @click="selectItem(item.id, item.idx)">➔</button>
         </li>
       </template>
     </ScrollList>
@@ -52,11 +44,8 @@ import { useList } from '@/composables/useList'
 import ScrollList from '@/components/ScrollList.vue'
 import InputNumber from '@/components/InputNumber.vue'
 
-//TODO handle new element select when server not saved yet
-
 const {
   list,
-  page,
   newId,
   hasMore,
   nextPage,
@@ -86,15 +75,33 @@ const {
 }
 
 .list-item {
-  padding: 14px;
   border-bottom: 1px solid #cacaca;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+
+  & span {
+    padding: 14px;
+  }
 
   &:last-of-type {
     border-bottom: none;
   }
+
+  &:hover {
+    .btn-select {
+      display: flex;
+    }
+  }
 }
 
-.btn-add {
+.list-item--new {
+  cursor: not-allowed;
+  background-color: rgba(0, 121, 46, 0.178);
+}
+
+.btn {
   border: 0;
   padding: 0;
   display: flex;
@@ -105,6 +112,7 @@ const {
   background: #d6d6d6;
   cursor: pointer;
   font-size: 30px;
+  border-radius: 4px;
 
   &:disabled {
     opacity: 0.5;
@@ -117,6 +125,12 @@ const {
   &:active {
     background-color: #585858;
   }
+}
+
+.btn-select {
+  font-size: 20px;
+  display: none;
+  margin-right: 20px;
 }
 
 .btn-loader {

@@ -4,6 +4,7 @@ import {
   type AddItemTask,
   type SelectItemTask,
   type Task,
+  type TaskResStatus,
   type UpdateItemPosTask,
 } from '@/services/api.service'
 
@@ -46,7 +47,18 @@ export function useTasksQueue() {
         data.forEach((item) => {
           if (item.task === undefined) return
 
-          eventBus.emit('task:status', item)
+          if (item.task.name === 'addItem') {
+            eventBus.emit('task:status/addItem', item as TaskResStatus<{ idx?: number }>)
+          }
+
+          if (item.task.name === 'selectItem') {
+            eventBus.emit('task:status/selectItem', item as TaskResStatus<{}>)
+          }
+
+          if (item.task.name === 'updateItemPos') {
+            eventBus.emit('task:status/updateItemPos', item as TaskResStatus<{}>)
+          }
+
           tasksQueue.delete(item.key)
         })
       } catch (error) {

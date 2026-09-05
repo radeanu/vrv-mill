@@ -1,7 +1,12 @@
-import type { TaskResStatus } from '@/services/api.service'
+import type { TaskResStatus, SelectItemTask } from '@/services/api.service'
 
 export interface AppEvents {
-  'task:status': TaskResStatus
+  selectItem: SelectItemTask['payload']
+  commitSelectItem: SelectItemTask['payload']
+  rollBackSelectItem: SelectItemTask['payload']
+  'task:status/addItem': TaskResStatus<{ idx?: number }>
+  'task:status/selectItem': TaskResStatus<{}>
+  'task:status/updateItemPos': TaskResStatus<{}>
 }
 
 const listeners: { [K in keyof AppEvents]?: ((data: AppEvents[K]) => void)[] } = {}

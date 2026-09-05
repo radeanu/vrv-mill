@@ -1,21 +1,28 @@
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { useLoading } from '@/composables/useLoading'
-import { fetchSelectedList, type ListItem } from '@/services/api.service'
+import { useEventBus } from '@/composables/useEventBus'
+import { fetchSelectedList, type SelectItemTask, type TaskResStatus } from '@/services/api.service'
+import { useTasksQueue } from './useTasksQueue'
+
+const tasksQueue = useTasksQueue()
 
 export function useSelectedList() {
-  const page = ref(1)
   const hasMore = ref(false)
-  const list = ref<ListItem[]>([])
-  const newId = ref<number>()
   const searchId = ref<number>()
+  const cursor = ref<number | null>(null)
 
+  const list = ref<Array<{ idx: number; id: number }>>([])
+  const pendingList = ref<Array<{ idx: number; id: number }>>([])
+
+  const eventBus = useEventBus()
   const listLoader = useLoading()
-  //   const addLoader = useLoading()
 
   const searchParams = computed(() => {
-    const params: { page: string; id?: string } = {
-      page: page.value.toString(),
+    const params: { cursor?: string; id?: string } = {}
+
+    if (cursor.value !== null) {
+      params.cursor = cursor.value.toString()
     }
 
     if (searchId.value !== undefined) {
@@ -26,13 +33,38 @@ export function useSelectedList() {
   })
 
   watch(searchId, async () => {
-    page.value = 1
+    cursor.value = null
     list.value.length = 0
     await fetchItems()
   })
 
+  onMounted(async () => {
+    await fetchItems()
+    eventBus.on('selectItem', handleSelectItem)
+    eventBus.on('commitSelectItem', handleCommitSelectItem)
+    eventBus.on('rollBackSelectItem', handleRollBackSelectItem)
+  })
+
+  onBeforeUnmount(() => {
+    eventBus.off('selectItem', handleSelectItem)
+    eventBus.off('rollBackSelectItem', handleCommitSelectItem)
+    eventBus.off('rollBackSelectItem', handleRollBackSelectItem)
+  })
+
+  function handleSelectItem(item: SelectItemTask['payload']) {
+    pendingList.value.unshift(item)
+  }
+
+  function handleCommitSelectItem(item: SelectItemTask['payload']) {
+    pendingList.value = pendingList.value.filter((v) => v.id !== item.id && v.idx !== item.idx)
+    list.value.unshift(item)
+  }
+
+  function handleRollBackSelectItem(item: SelectItemTask['payload']) {
+    pendingList.value = pendingList.value.filter((v) => v.id !== item.id && v.idx !== item.idx)
+  }
+
   async function nextPage() {
-    page.value += 1
     await fetchItems()
   }
 
@@ -42,6 +74,7 @@ export function useSelectedList() {
 
       const res = await fetchSelectedList(searchParams.value)
       hasMore.value = res.hasMore
+      cursor.value = res.nextCursor
 
       list.value.push(...res.items)
     } catch (error) {
@@ -53,12 +86,11 @@ export function useSelectedList() {
 
   return {
     list,
-    page,
-    newId,
     hasMore,
     nextPage,
     searchId,
     listLoader,
     fetchItems,
+    pendingList,
   }
 }

@@ -8,6 +8,6 @@ router.get('/', listCtrl.getList);
 router.get('/selected', listCtrl.getSelectedList);
 
 router.post('/add', listCtrl.addItemToList);
-router.post('/select-item', listCtrl.addItemToList);
+router.post('/select-item', listCtrl.selectItem);
 
 export default router;

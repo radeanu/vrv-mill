@@ -13,7 +13,7 @@ const VALIDATORS = {
 export default {
 	getList: yup.object({
 		id: VALIDATORS.number('id').optional(),
-		cursor: VALIDATORS.number('cursor').default(null),
+		cursor: VALIDATORS.number('cursor').nullable().default(null),
 	}),
 	addItemToList: yup
 		.object({
