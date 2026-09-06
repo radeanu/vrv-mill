@@ -87,8 +87,6 @@ export function useList() {
 
     const insPos = list.value.findIndex((v) => v.idx < item.idx)
 
-    console.log({ insPos })
-
     if (insPos === -1) {
       list.value.push(item)
     } else {

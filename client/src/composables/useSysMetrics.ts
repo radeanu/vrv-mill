@@ -17,7 +17,7 @@ export function useSysMetrics() {
 
     eventSource.onmessage = function (event) {
       metrics.value = JSON.parse(event.data) as SysMetrics
-      console.log(
+      console.info(
         `CPU: ${metrics.value.cpu} | RAM ${metrics.value.ram.serverTotal} / ${metrics.value.ram.nodeAppUsed}  ${metrics.value.ram.nodeAppUsedPercent}`,
       )
     }
