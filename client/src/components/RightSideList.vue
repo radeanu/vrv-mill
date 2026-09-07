@@ -40,131 +40,56 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 
 import ScrollList from '@/components/ScrollList.vue'
 import InputNumber from '@/components/InputNumber.vue'
 import { useSelectedList } from '@/composables/useSelectedList'
+import { useDragAndDrop } from '@/composables/useDragAndDrop'
 
 const { list, pendingList, nextPage, hasMore, listLoader, searchId } = useSelectedList()
 
-const mouseY = ref(0)
-const dragElTop = ref(0)
-const isMoving = ref(false)
-const dragEl = ref<HTMLElement | null>(null)
-const emptyEl = ref<HTMLElement | null>(null)
-const overEl = shallowRef<HTMLElement | null>(null)
+const dragAndDrop = useDragAndDrop()
 
 onMounted(() => {
-  document.addEventListener('mousemove', onMouseMove)
   document.addEventListener('mouseup', onDragEnd)
 })
 
 onBeforeUnmount(() => {
-  document.removeEventListener('mousemove', onMouseMove)
   document.removeEventListener('mouseup', onDragEnd)
 })
 
 function onMouseMoveOnLi(ev: MouseEvent) {
-  if (!dragEl.value || !emptyEl.value) return
-
-  const el = ev.currentTarget as HTMLElement
-  const elRect = el.getBoundingClientRect()
-  const elHeight = elRect.height
-  const mousePos = ev.pageY - elRect.top
-  const isOnTop = elHeight / 2 > mousePos
-
-  emptyEl.value.remove()
-  emptyEl.value = createSameEmptyEl(dragEl.value)
-
-  if (isOnTop) {
-    el.before(emptyEl.value)
-  } else {
-    el.after(emptyEl.value)
-  }
-
-  overEl.value = el
+  //   if (!dragEl.value || !emptyEl.value) return
+  //   const el = ev.currentTarget as HTMLElement
+  //   const elRect = el.getBoundingClientRect()
+  //   const elHeight = elRect.height
+  //   const mousePos = ev.pageY - elRect.top
+  //   const isOnTop = elHeight / 2 > mousePos
+  //   emptyEl.value.remove()
+  //   emptyEl.value = createSameEmptyEl(dragEl.value)
+  //   if (isOnTop) {
+  //     el.before(emptyEl.value)
+  //   } else {
+  //     el.after(emptyEl.value)
+  //   }
+  //   overEl.value = el
 }
 
 function onDragInit(ev: MouseEvent) {
   const el = ev.target as HTMLElement
-  const parentEl = el.parentElement
-  if (!parentEl) return
-
-  const listEl = parentEl.parentElement
-  if (!listEl) return
-
-  dragEl.value = parentEl
-  dragEl.value.classList.add('list-item--drag')
-  const ulRect = dragEl.value.parentElement!.getBoundingClientRect()
-
-  dragElTop.value = dragEl.value.getBoundingClientRect().top - ulRect.top
-
-  emptyEl.value = createSameEmptyEl(parentEl)
-
-  const nextEl = parentEl.nextSibling
-  const prevEl = parentEl.previousSibling
-
-  if (nextEl) {
-    nextEl.before(emptyEl.value)
-  } else if (prevEl) {
-    prevEl.after(emptyEl.value)
-  }
-}
-
-function onMouseMove(ev: MouseEvent) {
-  if (!dragEl.value) return
-
-  const ulRect = dragEl.value.parentElement!.getBoundingClientRect()
-  mouseY.value = ev.pageY - ulRect.top - dragElTop.value
-
-  requestTick()
+  dragAndDrop.init(el, 1)
 }
 
 function onDragEnd(ev: DragEvent | MouseEvent) {
-  if (!dragEl.value) return
-
-  console.log(overEl.value)
-
-  isMoving.value = false
-  mouseY.value = 0
-  dragEl.value.classList.remove('list-item--drag')
-  dragEl.value = null
-  overEl.value = null
-  emptyEl.value?.remove()
-}
-
-function requestTick() {
-  if (!isMoving.value) {
-    requestAnimationFrame(updatePosition)
-    isMoving.value = true
-  }
-}
-
-function updatePosition() {
-  if (!dragEl.value) {
-    isMoving.value = false
-    return
-  }
-
-  const height = dragEl.value.offsetHeight
-  const targetY = mouseY.value - height / 2
-  dragEl.value.style.transform = `translateY(${targetY}px)`
-
-  isMoving.value = false
-}
-
-function createSameEmptyEl(el: HTMLElement) {
-  const rect = el.getBoundingClientRect()
-  const newEl = document.createElement('li')
-
-  newEl.style.width = `${rect.width}px`
-  newEl.style.height = `${rect.height}px`
-  newEl.style.backgroundColor = '#dfdfdf'
-  newEl.style.borderBottom = '1px solid #cacaca'
-  newEl.style.pointerEvents = 'none'
-
-  return newEl
+  //   if (!dragEl.value) return
+  //   console.log(overEl.value)
+  //   isMoving.value = false
+  //   mouseY.value = 0
+  //   dragEl.value.classList.remove('list-item--drag')
+  //   dragEl.value = null
+  //   overEl.value = null
+  //   emptyEl.value?.remove()
 }
 </script>
 
@@ -203,17 +128,6 @@ function createSameEmptyEl(el: HTMLElement) {
 .list-item--new {
   cursor: not-allowed;
   background-color: rgba(0, 121, 46, 0.178);
-}
-
-.list-item--drag {
-  width: 100%;
-  background-color: red;
-  z-index: 10;
-  will-change: transform;
-  position: absolute;
-  margin: 0;
-  left: 0;
-  pointer-events: none;
 }
 
 .btn-drag {
