@@ -28,7 +28,8 @@ export default {
 		})
 		.required('id required'),
 	updateItemOrder: yup.object({
-		fromPos: VALIDATORS.number('fromPos').required(),
-		toPos: VALIDATORS.number('fromPos').required(),
+		key: VALIDATORS.idpKey,
+		oldPos: VALIDATORS.number('oldPos').required(),
+		newPos: VALIDATORS.number('newPos').required(),
 	}),
 };

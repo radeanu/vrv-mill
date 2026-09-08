@@ -2,8 +2,15 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { useLoading } from '@/composables/useLoading'
 import { useEventBus } from '@/composables/useEventBus'
-import { fetchSelectedList, type SelectItemTask, type TaskResStatus } from '@/services/api.service'
+import {
+  fetchSelectedList,
+  postUpdateItemOrder,
+  type SelectItemTask,
+  type TaskResStatus,
+  type UpdateItemPosTask,
+} from '@/services/api.service'
 import { useTasksQueue } from './useTasksQueue'
+import { useDragAndDrop, type DropPayload } from './useDragAndDrop'
 
 const tasksQueue = useTasksQueue()
 
@@ -12,11 +19,12 @@ export function useSelectedList() {
   const searchId = ref<number>()
   const cursor = ref<number | null>(null)
 
-  const list = ref<Array<{ idx: number; id: number }>>([])
+  const list = ref<Array<{ idx: number; id: number; loading?: boolean }>>([])
   const pendingList = ref<Array<{ idx: number; id: number }>>([])
 
   const eventBus = useEventBus()
   const listLoader = useLoading()
+  const dragAndDrop = useDragAndDrop(_onDrop)
 
   const searchParams = computed(() => {
     const params: { cursor?: string; id?: string } = {}
@@ -43,6 +51,7 @@ export function useSelectedList() {
     eventBus.on('selectItem', handleSelectItem)
     eventBus.on('commitSelectItem', handleCommitSelectItem)
     eventBus.on('rollBackSelectItem', handleRollBackSelectItem)
+    eventBus.on('task:status/updateItemPos', handleUpdateItemPosTaskStatus)
   })
 
   onBeforeUnmount(() => {
@@ -50,6 +59,32 @@ export function useSelectedList() {
     eventBus.off('rollBackSelectItem', handleCommitSelectItem)
     eventBus.off('rollBackSelectItem', handleRollBackSelectItem)
   })
+
+  function handleUpdateItemPosTaskStatus(res: TaskResStatus<UpdateItemPosTask['payload']>) {
+    if (!res.task) return
+
+    const targetTask = tasksQueue.get(res.key)
+    if (targetTask?.name !== 'updateItemPos') return
+
+    tasksQueue.remove(res.key)
+
+    const payload = targetTask.payload
+    const listItem = list.value.find((v) => v.id === payload.id && v.idx === payload.idx)
+
+    if (res.task.status === 'success' && listItem) {
+      listItem.loading = false
+    }
+
+    if (res.task.status === 'error' && listItem) {
+      listItem.loading = false
+
+      const [removedItem] = list.value.splice(payload.newPos, 1)
+
+      if (removedItem) {
+        list.value.splice(payload.oldPos, 0, removedItem)
+      }
+    }
+  }
 
   function handleSelectItem(item: SelectItemTask['payload']) {
     pendingList.value.unshift(item)
@@ -64,8 +99,58 @@ export function useSelectedList() {
     pendingList.value = pendingList.value.filter((v) => v.id !== item.id && v.idx !== item.idx)
   }
 
-  async function nextPage() {
-    await fetchItems()
+  function _getNewPos(payload: DropPayload) {
+    const dragId = parseInt(payload.draggedEl.dataset.id || '', 10)
+    const dragIdx = parseInt(payload.draggedEl.dataset.idx || '', 10)
+
+    const targetId = parseInt(payload.targetEl.dataset.id || '', 10)
+    const targetIdx = parseInt(payload.targetEl.dataset.idx || '', 10)
+
+    if ([dragId, dragIdx, targetId, targetIdx].some((v) => !isFinite(v))) return null
+
+    const listDragIdx = list.value.findIndex((v) => v.id === dragId && v.idx === dragIdx)
+    const listTargetIdx = list.value.findIndex((v) => v.id === targetId && v.idx === targetIdx)
+
+    if (listDragIdx === -1 || listTargetIdx === -1) return null
+
+    let newIdx = listTargetIdx
+
+    if (payload.position === 'after') {
+      newIdx = listDragIdx < listTargetIdx ? listTargetIdx : listTargetIdx + 1
+    } else {
+      newIdx = listDragIdx < listTargetIdx ? listTargetIdx - 1 : listTargetIdx
+    }
+
+    newIdx = Math.max(0, Math.min(newIdx, list.value.length - 1))
+
+    return {
+      id: dragId,
+      idx: dragIdx,
+      oldPos: listDragIdx,
+      newPos: newIdx,
+    }
+  }
+
+  function onDragInit(ev: MouseEvent) {
+    dragAndDrop.init(ev, 2)
+  }
+
+  async function _onDrop(payload: DropPayload) {
+    const result = _getNewPos(payload)
+    if (result === null) return
+
+    const sent = await updateItemOrder(result.id, result.idx, result.oldPos, result.newPos)
+
+    const el = list.value[result.oldPos]
+    if (el !== undefined) el.loading = true
+
+    if (sent) {
+      const [removedItem] = list.value.splice(result.oldPos, 1)
+
+      if (removedItem) {
+        list.value.splice(result.newPos, 0, removedItem)
+      }
+    }
   }
 
   async function fetchItems() {
@@ -84,13 +169,29 @@ export function useSelectedList() {
     }
   }
 
+  async function updateItemOrder(id: number, idx: number, oldPos: number, newPos: number) {
+    try {
+      const sent = await postUpdateItemOrder({
+        id,
+        idx,
+        oldPos,
+        newPos,
+      })
+
+      return sent
+    } catch (error) {
+      console.log(error)
+      return false
+    }
+  }
+
   return {
     list,
     hasMore,
-    nextPage,
     searchId,
     listLoader,
     fetchItems,
+    onDragInit,
     pendingList,
   }
 }

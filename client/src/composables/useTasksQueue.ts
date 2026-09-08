@@ -56,7 +56,10 @@ export function useTasksQueue() {
           }
 
           if (item.task.name === 'updateItemPos') {
-            eventBus.emit('task:status/updateItemPos', item as TaskResStatus<{}>)
+            eventBus.emit(
+              'task:status/updateItemPos',
+              item as TaskResStatus<UpdateItemPosTask['payload']>,
+            )
           }
 
           tasksQueue.delete(item.key)

@@ -9,7 +9,7 @@
       :track-next-page="hasMore"
       :loading="listLoader.isLoading.value"
       class="list"
-      @next-page="nextPage"
+      @next-page="fetchItems"
     >
       <template #list>
         <li
@@ -27,9 +27,12 @@
           class="list-item"
           :data-id="item.id"
           :data-idx="item.idx"
-          @mousemove="onMouseMoveOnLi"
         >
-          <button class="btn-drag" @mousedown="onDragInit">⣿</button>
+          <div class="row">
+            <button class="btn-drag" @mousedown="onDragInit">⣿</button>
+            <span v-if="item.loading">сохранение...</span>
+          </div>
+
           <span>#{{ item.id }}</span>
         </li>
       </template>
@@ -40,57 +43,12 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
-
 import ScrollList from '@/components/ScrollList.vue'
 import InputNumber from '@/components/InputNumber.vue'
 import { useSelectedList } from '@/composables/useSelectedList'
-import { useDragAndDrop } from '@/composables/useDragAndDrop'
 
-const { list, pendingList, nextPage, hasMore, listLoader, searchId } = useSelectedList()
-
-const dragAndDrop = useDragAndDrop()
-
-onMounted(() => {
-  document.addEventListener('mouseup', onDragEnd)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('mouseup', onDragEnd)
-})
-
-function onMouseMoveOnLi(ev: MouseEvent) {
-  //   if (!dragEl.value || !emptyEl.value) return
-  //   const el = ev.currentTarget as HTMLElement
-  //   const elRect = el.getBoundingClientRect()
-  //   const elHeight = elRect.height
-  //   const mousePos = ev.pageY - elRect.top
-  //   const isOnTop = elHeight / 2 > mousePos
-  //   emptyEl.value.remove()
-  //   emptyEl.value = createSameEmptyEl(dragEl.value)
-  //   if (isOnTop) {
-  //     el.before(emptyEl.value)
-  //   } else {
-  //     el.after(emptyEl.value)
-  //   }
-  //   overEl.value = el
-}
-
-function onDragInit(ev: MouseEvent) {
-  const el = ev.target as HTMLElement
-  dragAndDrop.init(el, 1)
-}
-
-function onDragEnd(ev: DragEvent | MouseEvent) {
-  //   if (!dragEl.value) return
-  //   console.log(overEl.value)
-  //   isMoving.value = false
-  //   mouseY.value = 0
-  //   dragEl.value.classList.remove('list-item--drag')
-  //   dragEl.value = null
-  //   overEl.value = null
-  //   emptyEl.value?.remove()
-}
+const { list, pendingList, fetchItems, hasMore, listLoader, searchId, onDragInit } =
+  useSelectedList()
 </script>
 
 <style scoped>
@@ -128,6 +86,12 @@ function onDragEnd(ev: DragEvent | MouseEvent) {
 .list-item--new {
   cursor: not-allowed;
   background-color: rgba(0, 121, 46, 0.178);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
 .btn-drag {

@@ -87,3 +87,28 @@ export async function selectItem(req: Request, res: Response, next: NextFunction
 		next(error);
 	}
 }
+
+export async function updateItemOrder(req: Request, res: Response, next: NextFunction) {
+	try {
+		const payload = await schema.updateItemOrder.validate(
+			{
+				...req.body,
+				key: req.headers?.[IDEMPOTENCY_KEY],
+			},
+			{ abortEarly: false, stripUnknown: true },
+		);
+
+		taskRegister.addTask({
+			name: 'updateItemPos',
+			key: payload.key,
+			payload: {
+				oldPos: payload.oldPos,
+				newPos: payload.newPos,
+			},
+		});
+
+		return res.status(202).send();
+	} catch (error) {
+		next(error);
+	}
+}

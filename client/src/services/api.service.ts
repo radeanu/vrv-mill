@@ -28,6 +28,8 @@ export type UpdateItemPosTask = {
   key: string
   name: 'updateItemPos'
   payload: {
+    id: number
+    idx: number
     oldPos: number
     newPos: number
   }
@@ -122,6 +124,28 @@ export async function postSelectItem(id: number, idx: number) {
       key: res.key,
       name: 'selectItem',
       payload: { id, idx },
+    })
+  }
+
+  return res.sent
+}
+
+export async function postUpdateItemOrder(payload: {
+  id: number
+  idx: number
+  oldPos: number
+  newPos: number
+}) {
+  const url = new URL('http://localhost:3000/api/v1/list/update-order')
+  const body = JSON.stringify({ oldPos: payload.oldPos, newPos: payload.newPos })
+
+  const res = await _postNewTask(url, body)
+
+  if (res.sent) {
+    tasksQueue.add(res.key, {
+      key: res.key,
+      name: 'updateItemPos',
+      payload,
     })
   }
 

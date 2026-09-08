@@ -1,23 +1,27 @@
-import {
-  onBeforeUnmount,
-  ref,
-  onMounted,
-  shallowRef,
-  toValue,
-  type MaybeRefOrGetter,
-  watch,
-} from 'vue'
+import { onBeforeUnmount, ref, onMounted, shallowRef, watch } from 'vue'
+
 import { useEdgeAutoScroll } from '@/composables/useEdgeAutoScroll'
 
-export function useDragAndDrop() {
+export type DropPayload = {
+  draggedEl: HTMLElement
+  targetEl: HTMLElement
+  position: 'before' | 'after'
+}
+
+export type DropCallback = (payload: DropPayload) => void
+
+export function useDragAndDrop(onDrop?: DropCallback) {
   const dragEl = shallowRef<HTMLElement | null>(null)
   const overflowEl = shallowRef<HTMLElement | null>(null)
   const placeholderEl = shallowRef<HTMLElement | null>(null)
-  const dragElStyleBefore = ref<{ [k in keyof CSSStyleProperties]?: string }>()
+
+  const targetDropEl = shallowRef<HTMLElement | null>(null)
+  const dropPosition = ref<'before' | 'after'>('before')
 
   const mouseY = ref(0)
-  const mousePageY = ref(0)
   const dragElTop = ref(0)
+  const mouseClientY = ref(0)
+  const mouseClientX = ref(0)
   const isMoving = ref(false)
 
   const edgeAutoScroll = useEdgeAutoScroll()
@@ -28,7 +32,7 @@ export function useDragAndDrop() {
     overflowEl.value.addEventListener('scroll', _calcMouseYPos)
   })
 
-  watch(mousePageY, _calcMouseYPos)
+  watch(mouseClientY, _calcMouseYPos)
 
   onMounted(() => {
     document.addEventListener('mousemove', _onMouseMove)
@@ -36,26 +40,44 @@ export function useDragAndDrop() {
   })
 
   onBeforeUnmount(() => {
-    reset()
-    document.removeEventListener('mousemove', _onMouseMove)
     document.removeEventListener('mouseup', _onMouseUp)
+    document.removeEventListener('mousemove', _onMouseMove)
+
+    reset()
   })
 
   function _onMouseMove(ev: MouseEvent) {
     if (!dragEl.value || !overflowEl.value) return
 
-    mousePageY.value = ev.pageY
+    mouseClientY.value = ev.clientY
+    mouseClientX.value = ev.clientX
   }
 
-  function _onMouseUp() {}
+  function _onMouseUp() {
+    if (!dragEl.value || !placeholderEl.value) {
+      reset()
+      return
+    }
+
+    placeholderEl.value.before(dragEl.value)
+
+    if (targetDropEl.value && onDrop) {
+      onDrop({
+        draggedEl: dragEl.value,
+        targetEl: targetDropEl.value,
+        position: dropPosition.value,
+      })
+    }
+
+    reset()
+  }
 
   function _calcMouseYPos() {
     if (!dragEl.value || !overflowEl.value) return
     const ofwRect = overflowEl.value.getBoundingClientRect()
 
-    // mouseY.value = mousePageY.value - ofwRect.top - dragElTop.value
-    mouseY.value = mousePageY.value - ofwRect.top - dragElTop.value + overflowEl.value.scrollTop
-    console.log(mouseY.value, overflowEl.value.scrollTop)
+    const relativeMouseY = mouseClientY.value - ofwRect.top
+    mouseY.value = relativeMouseY + overflowEl.value.scrollTop - dragElTop.value
 
     if (!isMoving.value) {
       requestAnimationFrame(_updatePosition)
@@ -69,17 +91,45 @@ export function useDragAndDrop() {
       return
     }
 
-    const height = dragEl.value.offsetHeight
-    const targetY = mouseY.value - height / 2
-    dragEl.value.style.transform = `translateY(${targetY}px)`
+    dragEl.value.style.transform = `translateY(${mouseY.value}px)`
+    _movePlaceholder()
 
     isMoving.value = false
+  }
+
+  function _movePlaceholder() {
+    if (!dragEl.value || !overflowEl.value || !placeholderEl.value) return
+
+    const targetElement = document.elementFromPoint(
+      mouseClientX.value,
+      mouseClientY.value,
+    ) as HTMLElement | null
+
+    if (!targetElement) return
+
+    const closestItem = targetElement.closest('.list-item') as HTMLElement | null
+
+    if (!closestItem || closestItem === dragEl.value || closestItem === placeholderEl.value) return
+
+    targetDropEl.value = closestItem
+
+    const targetRect = closestItem.getBoundingClientRect()
+    const targetCenterY = targetRect.top + targetRect.height / 2
+
+    if (mouseClientY.value < targetCenterY) {
+      closestItem.before(placeholderEl.value)
+      dropPosition.value = 'before'
+    } else {
+      closestItem.after(placeholderEl.value)
+      dropPosition.value = 'after'
+    }
   }
 
   function _createPlaceholder(el: HTMLElement): HTMLElement {
     const rect = el.getBoundingClientRect()
     const newEl = document.createElement(el.tagName)
 
+    newEl.classList.add('list-placeholder')
     newEl.style.width = `${rect.width}px`
     newEl.style.height = `${rect.height}px`
     newEl.style.backgroundColor = '#dfdfdf'
@@ -92,19 +142,6 @@ export function useDragAndDrop() {
   function _computeDragElStyles() {
     if (!dragEl.value) return
 
-    const cStyle = window.getComputedStyle(dragEl.value)
-
-    dragElStyleBefore.value = {
-      width: cStyle.width,
-      backgroundColor: cStyle.backgroundColor,
-      zIndex: cStyle.zIndex,
-      willChange: cStyle.willChange,
-      position: cStyle.position,
-      margin: cStyle.margin,
-      left: cStyle.left,
-      pointerEvents: cStyle.pointerEvents,
-    }
-
     dragEl.value.style.width = '100%'
     dragEl.value.style.backgroundColor = 'red'
     dragEl.value.style.zIndex = '10'
@@ -112,13 +149,23 @@ export function useDragAndDrop() {
     dragEl.value.style.position = 'absolute'
     dragEl.value.style.margin = '0'
     dragEl.value.style.left = '0'
+    dragEl.value.style.top = '0'
     dragEl.value.style.pointerEvents = 'none'
   }
 
   function _resetDragElStyles() {
-    if (!dragEl.value || !dragElStyleBefore.value) return
+    if (!dragEl.value) return
 
-    Object.assign(dragEl.value.style, dragElStyleBefore.value)
+    dragEl.value.style.width = ''
+    dragEl.value.style.backgroundColor = ''
+    dragEl.value.style.zIndex = ''
+    dragEl.value.style.willChange = ''
+    dragEl.value.style.position = ''
+    dragEl.value.style.margin = ''
+    dragEl.value.style.left = ''
+    dragEl.value.style.top = ''
+    dragEl.value.style.pointerEvents = ''
+    dragEl.value.style.transform = ''
   }
 
   function _addPlaceholder() {
@@ -154,27 +201,42 @@ export function useDragAndDrop() {
     return el.parentElement ? _findOverflowEl(el.parentElement) : null
   }
 
-  function init(el: MaybeRefOrGetter<HTMLElement | null>, dragElDeep: number) {
-    const elVal = toValue(el)
-    if (!elVal) return
+  function init(ev: MouseEvent, dragElDeep: number) {
+    const el = ev.target as HTMLElement
+    if (!el) return
 
-    dragEl.value = _findDragEl(elVal, dragElDeep)
-    overflowEl.value = _findOverflowEl(elVal)
-    _computeDragElStyles()
+    dragEl.value = _findDragEl(el, dragElDeep)
+    overflowEl.value = _findOverflowEl(el)
 
     if (!overflowEl.value || !dragEl.value) return
 
-    const ovfRect = overflowEl.value.getBoundingClientRect()
-    dragElTop.value = dragEl.value.getBoundingClientRect().top - ovfRect.top
+    const dragRect = dragEl.value.getBoundingClientRect()
+    dragElTop.value = ev.clientY - dragRect.top
+    mouseY.value = dragEl.value.offsetTop
+    mouseClientY.value = ev.clientY
+    dragEl.value.style.transform = `translateY(${mouseY.value}px)`
 
+    _computeDragElStyles()
     _addPlaceholder()
 
     edgeAutoScroll.init(overflowEl)
   }
 
   function reset() {
+    if (overflowEl.value) {
+      overflowEl.value.removeEventListener('scroll', _calcMouseYPos)
+    }
+
+    _resetDragElStyles()
+
+    if (placeholderEl.value) {
+      placeholderEl.value.remove()
+      placeholderEl.value = null
+    }
+
     dragEl.value = null
     overflowEl.value = null
+    edgeAutoScroll.reset()
   }
 
   return {

@@ -1,22 +1,13 @@
-import {
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  shallowRef,
-  toValue,
-  watchEffect,
-  type MaybeRefOrGetter,
-} from 'vue'
+import { onBeforeUnmount, onMounted, ref, shallowRef, toValue, type MaybeRefOrGetter } from 'vue'
 
-export function useEdgeAutoScroll() {
+export function useEdgeAutoScroll(edgeSize = 40) {
   const elTop = ref(0)
-  const scrollY = ref(0)
   const elHeight = ref(0)
+  const scrollSpeed = ref(0)
   const enabled = ref(false)
-  const mustScroll = ref(false)
-  const scrolling = ref(false)
 
   const ovrEl = shallowRef<HTMLElement | null>(null)
+  let animationFrameId: number | null = null
 
   onMounted(() => {
     document.addEventListener('mousemove', _onMouseMove)
@@ -24,24 +15,46 @@ export function useEdgeAutoScroll() {
 
   onBeforeUnmount(() => {
     document.removeEventListener('mousemove', _onMouseMove)
-  })
-
-  watchEffect(() => {
-    setInterval(() => {
-      if (!ovrEl.value || !mustScroll.value) return
-
-      ovrEl.value.scrollTop += 4
-    }, 10)
+    reset()
   })
 
   function _onMouseMove(ev: MouseEvent) {
     if (!ovrEl.value) return
-    scrollY.value = ev.pageY - elTop.value
 
-    if (scrollY.value > elHeight.value) {
-      mustScroll.value = true
+    const relativeY = ev.clientY - elTop.value
+
+    if (relativeY > elHeight.value - edgeSize) {
+      scrollSpeed.value = 5
+      _startScrollLoop()
+    } else if (relativeY < edgeSize) {
+      scrollSpeed.value = -5
+      _startScrollLoop()
     } else {
-      mustScroll.value = false
+      scrollSpeed.value = 0
+      _stopScrollLoop()
+    }
+  }
+
+  function _startScrollLoop() {
+    if (animationFrameId) return
+
+    const loop = () => {
+      if (!ovrEl.value || scrollSpeed.value === 0) {
+        _stopScrollLoop()
+        return
+      }
+
+      ovrEl.value.scrollTop += scrollSpeed.value
+      animationFrameId = requestAnimationFrame(loop)
+    }
+
+    animationFrameId = requestAnimationFrame(loop)
+  }
+
+  function _stopScrollLoop() {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId)
+      animationFrameId = null
     }
   }
 
@@ -54,8 +67,15 @@ export function useEdgeAutoScroll() {
     elTop.value = elRect.top
   }
 
+  function reset() {
+    _stopScrollLoop()
+    ovrEl.value = null
+    scrollSpeed.value = 0
+  }
+
   return {
     init,
+    reset,
     enabled,
   }
 }
