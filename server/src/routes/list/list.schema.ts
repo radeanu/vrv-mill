@@ -31,5 +31,6 @@ export default {
 		key: VALIDATORS.idpKey,
 		oldPos: VALIDATORS.number('oldPos').required(),
 		newPos: VALIDATORS.number('newPos').required(),
+		searchId: VALIDATORS.number('searchId').optional(),
 	}),
 };

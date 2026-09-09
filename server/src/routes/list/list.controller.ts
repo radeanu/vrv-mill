@@ -104,10 +104,21 @@ export async function updateItemOrder(req: Request, res: Response, next: NextFun
 			payload: {
 				oldPos: payload.oldPos,
 				newPos: payload.newPos,
+				searchId: payload.searchId,
 			},
 		});
 
 		return res.status(202).send();
+	} catch (error) {
+		next(error);
+	}
+}
+
+export async function resetAllData(req: Request, res: Response, next: NextFunction) {
+	try {
+		listRepo.resetList();
+
+		return res.status(200).send();
 	} catch (error) {
 		next(error);
 	}

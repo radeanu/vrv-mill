@@ -1,0 +1,27 @@
+services:
+    server:
+        build:
+            context: ./server
+            dockerfile: Dockerfile
+        restart: always
+        ports:
+            - '3000:3000'
+        environment:
+            - NODE_ENV=development
+            - HOST=0.0.0.0
+        env_file:
+            - ./server/.env
+
+    client:
+        build:
+            context: ./client
+            dockerfile: Dockerfile
+            args:
+                - VITE_API_URL=http://localhost:3000
+        restart: always
+        env_file:
+            - ./client/.env
+        ports:
+            - '8080:80'
+        depends_on:
+            - server

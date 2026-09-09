@@ -2,6 +2,7 @@
   <section>
     <div class="section-header">
       <InputNumber v-model="searchId" name="searchLeft" placeholder="Поиск по ID" />
+      <button type="button" class="btn-reset" @click="resetAllData">Сбросить все</button>
     </div>
 
     <ScrollList
@@ -30,7 +31,7 @@
         >
           <div class="row">
             <button class="btn-drag" @mousedown="onDragInit">⣿</button>
-            <span v-if="item.loading">сохранение...</span>
+            <span v-if="item._loading">сохранение...</span>
           </div>
 
           <span>#{{ item.id }}</span>
@@ -47,7 +48,7 @@ import ScrollList from '@/components/ScrollList.vue'
 import InputNumber from '@/components/InputNumber.vue'
 import { useSelectedList } from '@/composables/useSelectedList'
 
-const { list, pendingList, fetchItems, hasMore, listLoader, searchId, onDragInit } =
+const { list, pendingList, fetchItems, hasMore, listLoader, searchId, onDragInit, resetAllData } =
   useSelectedList()
 </script>
 
@@ -57,7 +58,7 @@ const { list, pendingList, fetchItems, hasMore, listLoader, searchId, onDragInit
   padding-bottom: 20px;
   border-bottom: 1px solid #8f8f8f;
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr;
   column-gap: 10px;
   align-items: center;
 }
@@ -101,6 +102,18 @@ const { list, pendingList, fetchItems, hasMore, listLoader, searchId, onDragInit
   height: 30px;
   display: flex;
   cursor: grab;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dfdfdf;
+}
+
+.btn-reset {
+  margin: 0;
+  padding: 0;
+  width: 140px;
+  height: 40px;
+  display: flex;
+  cursor: pointer;
   align-items: center;
   justify-content: center;
   border: 1px solid #dfdfdf;

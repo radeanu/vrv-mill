@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useLoading } from '@/composables/useLoading'
 import { useEventBus } from '@/composables/useEventBus'
 import {
+  postResetAllData,
   fetchSelectedList,
   postUpdateItemOrder,
   type SelectItemTask,
@@ -19,7 +20,7 @@ export function useSelectedList() {
   const searchId = ref<number>()
   const cursor = ref<number | null>(null)
 
-  const list = ref<Array<{ idx: number; id: number; loading?: boolean }>>([])
+  const list = ref<Array<{ idx: number; id: number; _loading?: boolean }>>([])
   const pendingList = ref<Array<{ idx: number; id: number }>>([])
 
   const eventBus = useEventBus()
@@ -43,6 +44,7 @@ export function useSelectedList() {
   watch(searchId, async () => {
     cursor.value = null
     list.value.length = 0
+    tasksQueue.removeTasksByName('updateItemPos')
     await fetchItems()
   })
 
@@ -71,13 +73,11 @@ export function useSelectedList() {
     const payload = targetTask.payload
     const listItem = list.value.find((v) => v.id === payload.id && v.idx === payload.idx)
 
-    if (res.task.status === 'success' && listItem) {
-      listItem.loading = false
-    }
+    if (!listItem) return
+
+    listItem._loading = false
 
     if (res.task.status === 'error' && listItem) {
-      listItem.loading = false
-
       const [removedItem] = list.value.splice(payload.newPos, 1)
 
       if (removedItem) {
@@ -139,10 +139,16 @@ export function useSelectedList() {
     const result = _getNewPos(payload)
     if (result === null) return
 
-    const sent = await updateItemOrder(result.id, result.idx, result.oldPos, result.newPos)
+    const sent = await updateItemOrder({
+      id: result.id,
+      idx: result.idx,
+      oldPos: result.oldPos,
+      newPos: result.newPos,
+      searchId: searchId.value,
+    })
 
     const el = list.value[result.oldPos]
-    if (el !== undefined) el.loading = true
+    if (el !== undefined) el._loading = true
 
     if (sent) {
       const [removedItem] = list.value.splice(result.oldPos, 1)
@@ -163,25 +169,29 @@ export function useSelectedList() {
 
       list.value.push(...res.items)
     } catch (error) {
-      console.log(error)
+      console.error(error)
     } finally {
       listLoader.end()
     }
   }
 
-  async function updateItemOrder(id: number, idx: number, oldPos: number, newPos: number) {
+  async function updateItemOrder(payload: UpdateItemPosTask['payload']) {
     try {
-      const sent = await postUpdateItemOrder({
-        id,
-        idx,
-        oldPos,
-        newPos,
-      })
+      const sent = await postUpdateItemOrder(payload)
 
       return sent
     } catch (error) {
-      console.log(error)
+      console.error(error)
       return false
+    }
+  }
+
+  async function resetAllData() {
+    try {
+      await postResetAllData()
+      location.reload()
+    } catch (error) {
+      console.error(error)
     }
   }
 
@@ -193,5 +203,6 @@ export function useSelectedList() {
     fetchItems,
     onDragInit,
     pendingList,
+    resetAllData,
   }
 }

@@ -10,5 +10,6 @@ router.get('/selected', listCtrl.getSelectedList);
 router.post('/add', listCtrl.addItemToList);
 router.post('/select-item', listCtrl.selectItem);
 router.post('/update-order', listCtrl.updateItemOrder);
+router.post('/reset', listCtrl.resetAllData);
 
 export default router;

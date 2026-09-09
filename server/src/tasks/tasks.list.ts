@@ -81,7 +81,11 @@ export function useUpdateItemPosTask() {
 
 	function executeTask(task: UpdateItemPosTask) {
 		try {
-			const successRes = listRepo.updateSelectedItemPos(task.payload.oldPos, task.payload.newPos);
+			const successRes = listRepo.updateSelectedItemPos(
+				task.payload.oldPos,
+				task.payload.newPos,
+				task.payload.searchId,
+			);
 			const status = getStatus(successRes);
 
 			tasksStatus.add(task.key, status);

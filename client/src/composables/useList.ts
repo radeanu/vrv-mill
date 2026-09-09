@@ -111,7 +111,7 @@ export function useList() {
 
       list.value.push(...res.items)
     } catch (error) {
-      console.log(error)
+      console.error(error)
     } finally {
       listLoader.end()
     }
@@ -129,7 +129,7 @@ export function useList() {
         newId.value = undefined
       }
     } catch (error) {
-      console.log(error)
+      console.error(error)
     } finally {
       addLoader.end()
     }
@@ -144,7 +144,7 @@ export function useList() {
         list.value = list.value.filter((v) => v.idx !== idx)
       }
     } catch (error) {
-      console.log(error)
+      console.error(error)
     }
   }
 

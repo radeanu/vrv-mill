@@ -1,12 +1,12 @@
 import { logger } from '@/config';
-import { isNum, LIST_LENGTH, PAGE_LIMIT } from '@/common';
+import { isNum, LIST_SIZE, PAGE_LIMIT } from '@/common';
 
+let maxSize = 0;
+let currentSize = 0;
 let list: Int32Array<ArrayBuffer>;
+
 const selectedIndexes = new Set<number>();
 const selectedOrder: number[] = [];
-
-const maxLength = LIST_LENGTH + 100000;
-let currentLength = LIST_LENGTH;
 
 export type PaginatedResult = {
 	hasMore: boolean;
@@ -15,13 +15,15 @@ export type PaginatedResult = {
 	items: Array<{ idx: number; id: number }>;
 };
 
-export function resetList() {
-	list = new Int32Array(maxLength);
+export function resetList(size = LIST_SIZE) {
+	maxSize = size + 100_000;
+	list = new Int32Array(maxSize);
+
 	selectedOrder.length = 0;
 	selectedIndexes.clear();
-	currentLength = LIST_LENGTH;
+	currentSize = size;
 
-	for (let i = 0; i < LIST_LENGTH; i++) {
+	for (let i = 0; i < size; i++) {
 		list[i] = i + 1;
 	}
 }
@@ -29,7 +31,7 @@ export function resetList() {
 export function getPaginatedList(cursor: number | null, searchId?: number): PaginatedResult {
 	const result: Array<{ idx: number; id: number }> = [];
 
-	const startIndex = cursor !== null ? cursor - 1 : currentLength - 1;
+	const startIndex = cursor !== null ? cursor - 1 : currentSize - 1;
 
 	for (let i = startIndex; i >= 0; i--) {
 		if (selectedIndexes.has(i)) continue;
@@ -45,7 +47,7 @@ export function getPaginatedList(cursor: number | null, searchId?: number): Pagi
 
 	const nextCursor = result.length > 0 ? result[result.length - 1].idx : null;
 
-	const totalLeftItems = currentLength - selectedIndexes.size;
+	const totalLeftItems = currentSize - selectedIndexes.size;
 	const totalPages = Math.ceil(totalLeftItems / PAGE_LIMIT);
 
 	return {
@@ -85,18 +87,18 @@ export function getSelectedList(cursor: number | null, searchId?: number): Pagin
 
 export function addItemToList(id: number) {
 	try {
-		if (currentLength >= maxLength) {
-			logger.error('max length exceeded');
+		if (currentSize >= maxSize) {
+			logger.error('max size exceeded');
 			return { success: false };
 		}
 
-		const exists = list.subarray(0, currentLength).includes(id);
+		const exists = list.subarray(0, currentSize).includes(id);
 		if (exists) return { success: false };
 
-		list[currentLength] = id;
-		currentLength++;
+		list[currentSize] = id;
+		currentSize++;
 
-		return { success: true, idx: currentLength };
+		return { success: true, idx: currentSize };
 	} catch (error) {
 		logger.error(error);
 		return { success: false };
@@ -118,18 +120,28 @@ export function flushSelectedItems() {
 	selectedOrder.length = 0;
 }
 
-export function updateSelectedItemPos(oldPos: number, newPos: number) {
+export function updateSelectedItemPos(oldPos: number, newPos: number, searchId?: number) {
 	try {
 		if (oldPos === newPos) return true;
 
-		if (selectedOrder[oldPos] === undefined || selectedOrder[newPos] === undefined) {
+		const clientList = isNum(searchId)
+			? selectedOrder.filter((idx) => list[idx].toString().includes(searchId.toString()))
+			: selectedOrder;
+
+		const oldPosItem = clientList[oldPos];
+		const newPosItem = clientList[newPos];
+
+		if (oldPosItem === undefined || newPosItem === undefined) {
 			return false;
 		}
 
-		const [movedItem] = selectedOrder.splice(oldPos, 1);
+		const oldPosIdx = selectedOrder.indexOf(oldPosItem);
+		const newPosIdx = selectedOrder.indexOf(newPosItem);
 
-		if (movedItem) {
-			selectedOrder.splice(newPos, 0, movedItem);
+		const [movedItem] = selectedOrder.splice(oldPosIdx, 1);
+
+		if (movedItem !== undefined) {
+			selectedOrder.splice(newPosIdx, 0, movedItem);
 		}
 
 		return true;

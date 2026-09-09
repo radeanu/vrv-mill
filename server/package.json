@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "tsc && tsc-alias && node dist/src/index.js",
 		"build": "rm -rf dist && tsc && tsc-alias",
-		"test": "node --import tsx --test **/*.test.ts"
+		"test": "node --import tsx --test --test-only **/*.test.ts"
 	},
 	"dependencies": {
 		"compression": "^1.8.1",

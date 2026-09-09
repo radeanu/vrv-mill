@@ -32,6 +32,7 @@ export type UpdateItemPosTask = {
     idx: number
     oldPos: number
     newPos: number
+    searchId?: number
   }
 }
 
@@ -45,6 +46,8 @@ export type TaskStatus<T> = {
 export type TaskResStatus<T> = { key: string; task?: TaskStatus<T> }
 
 const tasksQueue = useTasksQueue()
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || window.location.origin
 
 async function _postNewTask(url: URL, body: string) {
   const idpKey = crypto.randomUUID()
@@ -62,7 +65,7 @@ async function _postNewTask(url: URL, body: string) {
 }
 
 export async function fetchList(searchParams: {}) {
-  const getListUrl = new URL('http://localhost:3000/api/v1/list')
+  const getListUrl = new URL(API_BASE_URL + '/api/v1/list')
   getListUrl.search = new URLSearchParams(searchParams).toString()
 
   const res = await fetch(getListUrl, { method: 'GET' })
@@ -72,7 +75,7 @@ export async function fetchList(searchParams: {}) {
 }
 
 export async function fetchSelectedList(searchParams: {}) {
-  const getListUrl = new URL('http://localhost:3000/api/v1/list/selected')
+  const getListUrl = new URL(API_BASE_URL + '/api/v1/list/selected')
   getListUrl.search = new URLSearchParams(searchParams).toString()
 
   const res = await fetch(getListUrl, { method: 'GET' })
@@ -82,7 +85,7 @@ export async function fetchSelectedList(searchParams: {}) {
 }
 
 export async function postGetTasksStatus(tasks: string[]): Promise<TaskResStatus<unknown>[]> {
-  const getUrl = new URL('http://localhost:3000/api/v1/task/get-status')
+  const getUrl = new URL(API_BASE_URL + '/api/v1/task/get-status')
   const body = JSON.stringify(tasks)
 
   const res = await fetch(getUrl, {
@@ -98,7 +101,7 @@ export async function postGetTasksStatus(tasks: string[]): Promise<TaskResStatus
 }
 
 export async function postAddNewId(id: number) {
-  const addIdUrl = new URL('http://localhost:3000/api/v1/list/add')
+  const addIdUrl = new URL(API_BASE_URL + '/api/v1/list/add')
   const body = JSON.stringify({ id })
 
   const res = await _postNewTask(addIdUrl, body)
@@ -114,7 +117,7 @@ export async function postAddNewId(id: number) {
 }
 
 export async function postSelectItem(id: number, idx: number) {
-  const url = new URL('http://localhost:3000/api/v1/list/select-item')
+  const url = new URL(API_BASE_URL + '/api/v1/list/select-item')
   const body = JSON.stringify({ id, idx })
 
   const res = await _postNewTask(url, body)
@@ -130,14 +133,13 @@ export async function postSelectItem(id: number, idx: number) {
   return res.sent
 }
 
-export async function postUpdateItemOrder(payload: {
-  id: number
-  idx: number
-  oldPos: number
-  newPos: number
-}) {
-  const url = new URL('http://localhost:3000/api/v1/list/update-order')
-  const body = JSON.stringify({ oldPos: payload.oldPos, newPos: payload.newPos })
+export async function postUpdateItemOrder(payload: UpdateItemPosTask['payload']) {
+  const url = new URL(API_BASE_URL + '/api/v1/list/update-order')
+  const body = JSON.stringify({
+    oldPos: payload.oldPos,
+    newPos: payload.newPos,
+    searchId: payload.searchId,
+  })
 
   const res = await _postNewTask(url, body)
 
@@ -150,4 +152,12 @@ export async function postUpdateItemOrder(payload: {
   }
 
   return res.sent
+}
+
+export async function postResetAllData() {
+  const url = new URL(API_BASE_URL + '/api/v1/list/reset')
+
+  const res = await fetch(url, { method: 'POST' })
+
+  return res.ok
 }

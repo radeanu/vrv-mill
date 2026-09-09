@@ -37,6 +37,14 @@ export function useTasksQueue() {
     tasksQueue.delete(key)
   }
 
+  function removeTasksByName(name: Task['name']) {
+    tasksQueue.forEach((el) => {
+      if (el.name === name) {
+        tasksQueue.delete(el.key)
+      }
+    })
+  }
+
   function watchForStatuses() {
     setInterval(async () => {
       try {
@@ -65,7 +73,7 @@ export function useTasksQueue() {
           tasksQueue.delete(item.key)
         })
       } catch (error) {
-        console.log(error)
+        console.error(error)
       }
     }, 1000)
   }
@@ -75,5 +83,6 @@ export function useTasksQueue() {
     get,
     remove,
     watchForStatuses,
+    removeTasksByName,
   }
 }

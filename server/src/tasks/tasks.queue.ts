@@ -24,6 +24,7 @@ export type UpdateItemPosTask = {
 	payload: {
 		oldPos: number;
 		newPos: number;
+		searchId?: number;
 	};
 };
 
