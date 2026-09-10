@@ -15,7 +15,7 @@ import { useSysMetrics } from '@/composables/useSysMetrics'
 
 const tasksQueue = useTasksQueue()
 tasksQueue.watchForStatuses()
-// useSysMetrics()
+useSysMetrics()
 </script>
 
 <style scoped>
