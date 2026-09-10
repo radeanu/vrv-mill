@@ -9,11 +9,13 @@ type SysMetrics = {
   }
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || window.location.origin
+
 export function useSysMetrics() {
   const metrics = ref<SysMetrics>()
 
   onMounted(() => {
-    const eventSource = new EventSource('http://localhost:3000/api/v1/sys-metrics')
+    const eventSource = new EventSource(API_BASE_URL + '/api/v1/sys-metrics')
 
     eventSource.onmessage = function (event) {
       metrics.value = JSON.parse(event.data) as SysMetrics
